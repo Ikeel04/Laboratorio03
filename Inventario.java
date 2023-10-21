@@ -1,0 +1,159 @@
+import com.opencsv.CSVReader;
+import com.opencsv.CSVReaderBuilder;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
+
+public class Inventario {
+    private ArrayList<Producto> productos;
+
+    public Inventario() {
+        this.productos = new ArrayList<>();
+    }
+
+    public void cargarProductosDesdeCSV(String archivo) {
+        try {
+            FileReader reader = new FileReader(archivo);
+            CSVReader csvReader = new CSVReaderBuilder(reader).withSkipLines(1).build();
+            List<String[]> rows = csvReader.readAll();
+
+            for (String[] row : rows) {
+                int id = Integer.parseInt(row[0]);
+                String nombre = row[1];
+                int cantidadDisponible = Integer.parseInt(row[2]);
+                int cantidadVendidos = Integer.parseInt(row[3]);
+                String estado = row[4];
+                double precio = Double.parseDouble(row[5]);
+                String categoria = row[6];
+                Producto nuevoProducto;
+
+                if (categoria.equals("Bebida")) {
+                    int ml = Integer.parseInt(row[7]);
+                    String tipo = row[8];
+                    nuevoProducto = new Bebida(id, nombre, cantidadDisponible, cantidadVendidos, estado, precio, ml, tipo);
+                } else if (categoria.equals("Snack")) {
+                    int gramos = Integer.parseInt(row[9]);
+                    String sabor = row[10];
+                    String tamanio = row[11];
+                    nuevoProducto = new Snack(id, nombre, cantidadDisponible, cantidadVendidos, estado, precio, gramos, sabor, tamanio);
+                } else {
+                    nuevoProducto = new Producto(id, nombre, cantidadDisponible, cantidadVendidos, estado, precio);
+                }
+
+                productos.add(nuevoProducto);
+            }
+
+            csvReader.close();
+            reader.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public Producto buscarProductoPorID(int id) {
+        for (Producto producto : productos) {
+            if (producto.getId() == id) {
+                return producto;
+            }
+        }
+        return null;
+    }
+
+    public ArrayList<Producto> listarProductosPorCategoria(String categoria) {
+        ArrayList<Producto> productosCategoria = new ArrayList<>();
+        for (Producto producto : productos) {
+            if ((producto instanceof Bebida && categoria.equalsIgnoreCase("Bebida"))
+                    || (producto instanceof Snack && categoria.equalsIgnoreCase("Snack"))) {
+                productosCategoria.add(producto);
+            }
+        }
+        return productosCategoria;
+    }
+
+    public void generarInformeDeVentas() {
+        double ventasTotales = 0;
+
+        for (Producto producto : productos) {
+            ventasTotales += producto.obtenerPrecioVenta() * producto.getCantidadVendidos();
+        }
+
+        System.out.println("Informe de Ventas:");
+        System.out.println("Ventas totales: Q" + ventasTotales);
+
+        double comisionBebida = 0;
+        double comisionSnack = 0;
+
+        for (Producto producto : productos) {
+            if (producto instanceof Bebida) {
+                comisionBebida += producto.obtenerPrecioVenta() * producto.getCantidadVendidos() * 0.2;
+            } else if (producto instanceof Snack) {
+                comisionSnack += producto.obtenerPrecioVenta() * producto.getCantidadVendidos() * 0.2;
+            }
+        }
+
+        System.out.println("Porcentaje de comisión (Bebida): Q" + comisionBebida);
+        System.out.println("Porcentaje de comisión (Snack): Q" + comisionSnack);
+    }
+
+    public static void main(String[] args) {
+        Inventario inventario = new Inventario();
+
+        System.out.println("Cargando productos desde archivo CSV...");
+        inventario.cargarProductosDesdeCSV("productos.csv");
+
+        Scanner scanner = new Scanner(System.in);
+
+        int opcion;
+
+        do {
+            System.out.println("\nMenú Principal:");
+            System.out.println("1. Buscar producto por ID");
+            System.out.println("2. Listar productos por categoría");
+            System.out.println("3. Generar informe de ventas");
+            System.out.println("0. Salir");
+            System.out.print("Ingrese su opción: ");
+            opcion = scanner.nextInt();
+
+            switch (opcion) {
+                case 1:
+                    System.out.print("Ingrese el ID del producto a buscar: ");
+                    int idBusqueda = scanner.nextInt();
+                    Producto productoEncontrado = inventario.buscarProductoPorID(idBusqueda);
+                    if (productoEncontrado != null) {
+                        System.out.println("Producto encontrado: " + productoEncontrado.getNombre());
+                    } else {
+                        System.out.println("Producto no encontrado.");
+                    }
+                    break;
+
+                case 2:
+                    scanner.nextLine();
+                    System.out.print("Ingrese la categoría (Bebida o Snack): ");
+                    String categoria = scanner.nextLine();
+                    ArrayList<Producto> productosCategoria = inventario.listarProductosPorCategoria(categoria);
+                    if (!productosCategoria.isEmpty()) {
+                        System.out.println("Productos en la categoría " + categoria + ":");
+                        for (Producto producto : productosCategoria) {
+                            System.out.println(producto.getNombre());
+                        }
+                    } else {
+                        System.out.println("No se encontraron productos en la categoría " + categoria);
+                    }
+                    break;
+
+                case 3:
+                    inventario.generarInformeDeVentas();
+                    break;
+
+                case 0:
+                    System.out.println("Saliendo del programa.");
+                    break;
+
+                default:
+                    System.out.println("Opción no válida. Por favor, elija una opción válida.");
+            }
+        } while (opcion != 0);
+    }
+}
